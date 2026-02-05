@@ -215,6 +215,8 @@
             display: flex;
             align-items: center;
             gap: 12px;
+            position: relative;
+            z-index: 10;
         }
 
         .canvas-toolbar {
@@ -247,12 +249,12 @@
             padding: 40px;
             background: linear-gradient(135deg, #f9f9f9 0%, #ffffff 100%);
             position: relative;
+            overflow: hidden;
         }
 
         .sketch-canvas {
             width: 100%;
-            max-width: 400px;
-            aspect-ratio: 1;
+            height: 100%;
             background: white;
             border: 2px dashed #ddd;
             border-radius: 8px;
@@ -589,13 +591,53 @@
 
         /* MOBILE RESPONSIVE */
         @media (max-width: 1024px) {
-            .sidebar-right {
-                width: 240px;
-            }
+            /* MOBILE RESPONSIVE BOTTOM SHEET */
+            @media (max-width: 1024px) {
+                .sidebar-right {
+                    position: fixed;
+                    bottom: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 50vh;
+                    /* Half screen height */
+                    max-height: 400px;
+                    border-left: none;
+                    border-top: 1px solid #ddd;
+                    border-radius: 16px 16px 0 0;
+                    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+                    z-index: 2000;
+                    transition: transform 0.3s ease;
+                }
 
-            .content-wrapper {
-                gap: 16px;
-                padding: 16px;
+                .mobile-category-tabs {
+                    display: flex !important;
+                    /* Show tabs on mobile */
+                }
+
+                .mobile-tab {
+                    flex: 1;
+                    text-align: center;
+                    padding: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #999;
+                    cursor: pointer;
+                    border-bottom: 2px solid transparent;
+                }
+
+                .mobile-tab.active {
+                    color: #333;
+                    border-bottom-color: #ff8c42;
+                }
+
+                /* Hide Desktop Separator on Mobile */
+                .desktop-separator {
+                    border-top: none !important;
+                    margin-top: 0 !important;
+                    padding-top: 0 !important;
+                }
+
+                /* Initially hide inactive tabs content via JS or CSS logic */
             }
 
             .header-subtitle {
@@ -627,22 +669,42 @@
 
             .sidebar-right {
                 position: fixed;
-                top: 0;
-                right: 0;
-                height: 100%;
-                width: 280px;
+                left: 0;
+                bottom: 0;
+                height: 50vh;
+                /* Default height - will be controlled by JS */
+                width: 100%;
                 z-index: 2000;
                 background: white;
-                transform: translateX(100%);
-                transition: transform 0.3s ease;
+                transition: none;
+                /* Disable transition during drag */
                 box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
                 border-left: 1px solid #e5e5e5;
                 display: flex;
             }
 
-            .sidebar-right.show {
-                transform: translateX(0);
+            /* Drag Handle */
+            .sheet-drag-handle {
+                display: flex !important;
+                justify-content: center;
+                align-items: center;
+                padding: 8px 0;
+                cursor: grab;
+                background: white;
+                border-bottom: 1px solid #f0f0f0;
             }
+
+            .sheet-drag-handle:active {
+                cursor: grabbing;
+            }
+
+            .drag-indicator {
+                width: 40px;
+                height: 4px;
+                background: #ddd;
+                border-radius: 2px;
+            }
+
 
             .mobile-menu-toggle {
                 display: flex !important;
@@ -773,7 +835,7 @@
             }
 
             .sidebar-right {
-                max-height: 100vh;
+                /* max-height: 100vh; */
             }
 
             .color-grid {
@@ -918,50 +980,84 @@
 
             <!-- RIGHT SIDEBAR -->
             <div class="sidebar-right">
+                <!-- Drag Handle for Mobile -->
+                <div class="sheet-drag-handle" style="display: none;">
+                    <div class="drag-indicator"></div>
+                </div>
+
                 <!-- COLORS -->
                 <!-- IMAGE COLORS -->
                 <div class="right-panel-section scroll-section" id="section-colors" style="display:none;">
-                    <div style="margin-bottom: 12px;">
-                        <div class="section-title" style="margin-bottom: 0;">Image Colors</div>
-                    </div>
-                    <div class="color-grid" id="imageColorGrid">
-                        <!-- Auto-generated colors -->
+
+                    <!-- MOBILE CATEGORY TABS -->
+                    <div class="mobile-category-tabs"
+                        style="display: none; border-bottom: 1px solid #eee; margin-bottom: 12px;">
+                        <div class="mobile-tab active" data-tab="image">Image Colors</div>
+                        <div class="mobile-tab" data-tab="basic">Basic Colors</div>
                     </div>
 
-                    <div style="margin-top:12px; display:flex; gap:8px; flex-direction:column;">
-                        <!-- Replacement Status INDICATOR (Visible only when Color Replacer is active) -->
-                        <div id="replacementStatus"
-                            style="display:none; padding: 10px; background: #fff5f0; border: 1px solid #ffccaa; border-radius: 6px; margin-bottom: 8px;">
-                            <div style="font-size: 11px; color: #666; margin-bottom: 6px; font-weight: 600;">Selected to
-                                Change:</div>
-                            <div style="display:flex; align-items:center; gap: 10px;">
-                                <div id="sourceColorPreview"
-                                    style="width: 30px; height: 30px; border-radius: 4px; border: 1px solid #ddd; background: #ddd;">
+                    <!-- TAB CONTENT: IMAGE COLORS -->
+                    <div id="tab-content-image">
+                        <div style="margin-bottom: 12px;">
+                            <div class="section-title" style="margin-bottom: 0;">Image Colors</div>
+                        </div>
+                        <div class="color-grid" id="imageColorGrid">
+                            <!-- Auto-generated colors -->
+                        </div>
+
+                        <!-- SWAP COLORS PANEL -->
+                        <div id="colorReplacerPanel"
+                            style="margin-top: 16px; background: #fafafa; border: 1px solid #eee; border-radius: 8px; padding: 12px;">
+
+                            <div
+                                style="font-size: 11px; font-weight: 700; color: #555; margin-bottom: 10px; text-transform:uppercase; letter-spacing:0.5px;">
+                                Swap Colors</div>
+
+                            <div
+                                style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 12px;">
+                                <!-- FROM -->
+                                <div style="flex: 1; display:flex; flex-direction:column; align-items:center;">
+                                    <div style="font-size: 10px; color: #999; margin-bottom: 4px;">FROM</div>
+                                    <div id="replaceFromPreview"
+                                        style="width: 100%; height: 32px; border-radius: 6px; border: 1px solid #ddd; background: #eee; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                                    </div>
+                                    <div id="replaceFromHex"
+                                        style="font-size: 10px; color: #999; margin-top: 4px; font-family: monospace;">-
+                                    </div>
                                 </div>
-                                <div style="font-size: 10px; color: #999;">Select new color below to apply change</div>
+
+                                <!-- ARROW -->
+                                <div style="color: #ccc; font-size: 14px;">➔</div>
+
+                                <!-- TO -->
+                                <div style="flex: 1; display:flex; flex-direction:column; align-items:center;">
+                                    <div style="font-size: 10px; color: #999; margin-bottom: 4px;">TO</div>
+                                    <div id="replaceToPreview"
+                                        style="width: 100%; height: 32px; border-radius: 6px; border: 1px solid #ddd; background: #fff; box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Target Input -->
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <span style="font-size:10px; font-weight:600; color:#999; width:20px;">HEX</span>
+                                <input type="text" id="replaceTargetInput" placeholder="#NewColor" class="dropdown"
+                                    style="flex:1; padding:8px; cursor:text; border-color: #ddd; background: #fff;">
                             </div>
                         </div>
-
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <span style="font-size:10px; font-weight:600; color:#999; width:32px;">HEX</span>
-                            <input type="text" id="hexInput" value="#4a90e2" class="dropdown"
-                                style="flex:1; padding:6px; cursor:text;">
-                        </div>
-                        <div style="display:flex; gap:8px; align-items:center;">
-                            <span style="font-size:10px; font-weight:600; color:#999; width:32px;">RGBA</span>
-                            <input type="text" id="rgbaInput" value="rgba(74, 144, 226, 1)" class="dropdown"
-                                style="flex:1; padding:6px; cursor:text;">
-                        </div>
                     </div>
 
-                    <!-- BASIC COLORS + SEARCH -->
-                    <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px;">
-                        <div class="section-title" style="margin-bottom: 10px;">Basic Colors</div>
-                        <input type="text" id="colorSearch" placeholder="Search basic colors..."
-                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; font-size: 12px;">
+                    <!-- TAB CONTENT: BASIC COLORS -->
+                    <div id="tab-content-basic">
+                        <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px;"
+                            class="desktop-separator">
+                            <div class="section-title" style="margin-bottom: 10px;">Basic Colors</div>
+                            <input type="text" id="colorSearch" placeholder="Search basic colors..."
+                                style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; font-size: 12px;">
 
-                        <div id="basicColorGrid" style="display: flex; flex-wrap: wrap; gap: 8px;">
-                            <!-- Auto-generated Color Tags -->
+                            <div id="basicColorGrid" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                <!-- Auto-generated Color Tags -->
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1106,8 +1202,6 @@
             if (history.length > 0) {
                 // To undo properly, we should save current state to redo first
                 // But generally history stack contains Previous States.
-                // Current state is what is visible (not in history yet, or is it?)
-                // Standard paint pattern: 
                 // History: [State1, State2]
                 // Current: State3 (visible)
                 // Undo -> RedoStack: [State3]. History: [State1]. Current: State2.
@@ -1167,27 +1261,65 @@
             if (zoomVal) zoomVal.textContent = Math.round(currentScale * 100) + '%';
         }
 
-        // Set canvas size
+        // Set canvas size (Responsive & Aspect Ratio Aware)
         function resizeCanvas() {
-            const rect = canvas.parentElement.getBoundingClientRect();
-            // Store current content
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            tempCanvas.width = canvas.width;
-            tempCanvas.height = canvas.height;
-            tempCtx.drawImage(canvas, 0, 0);
+            const container = canvas.parentElement;
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
 
-            canvas.width = rect.width;
-            canvas.height = rect.height;
-            selectionOverlay.width = rect.width;
-            selectionOverlay.height = rect.height;
-
-            // Restore image/content
-            if (currentImage) {
-                ctx.drawImage(tempCanvas, 0, 0);
-            } else if (canvas.width > 0 && canvas.height > 0) {
-                ctx.drawImage(tempCanvas, 0, 0);
+            // Save current content to restore after resize
+            // Only necessary if we have existing content and aren't just initializing
+            let tempCanvas = null;
+            if (canvas.width > 0 && canvas.height > 0) {
+                tempCanvas = document.createElement('canvas');
+                tempCanvas.width = canvas.width;
+                tempCanvas.height = canvas.height;
+                tempCanvas.getContext('2d').drawImage(canvas, 0, 0);
             }
+
+            let finalW = rect.width;
+            let finalH = rect.height;
+
+            // If we have an active image, snap canvas aspect ratio to match it
+            if (currentImage) {
+                const aspectImg = currentImage.width / currentImage.height;
+                const aspectRect = rect.width / rect.height;
+
+                if (aspectImg > aspectRect) {
+                    // Image is wider relative to container -> constraint by width
+                    finalW = rect.width;
+                    finalH = rect.width / aspectImg;
+                } else {
+                    // Image is taller -> constraint by height
+                    finalW = rect.height * aspectImg;
+                    finalH = rect.height;
+                }
+            }
+
+            // Update Dimensions
+            canvas.width = finalW;
+            canvas.height = finalH;
+            selectionOverlay.width = finalW;
+            selectionOverlay.height = finalH;
+            // Also set CSS to match to prevent stretching if CSS rules conflict
+            canvas.style.width = finalW + 'px';
+            canvas.style.height = finalH + 'px';
+            selectionOverlay.style.width = finalW + 'px';
+            selectionOverlay.style.height = finalH + 'px';
+
+            // Align Overlay with Centered Canvas
+            // Canvas is centered by flexbox, but Overlay is absolute top:0 left:0
+            // We must manually offset overlay to match
+            const offsetLeft = (rect.width - finalW) / 2;
+            const offsetTop = (rect.height - finalH) / 2;
+            selectionOverlay.style.left = offsetLeft + 'px';
+            selectionOverlay.style.top = offsetTop + 'px';
+
+            // Restore content
+            if (tempCanvas) {
+                ctx.drawImage(tempCanvas, 0, 0, finalW, finalH);
+            }
+
             // Clear selection overlay on resize
             clearSelection();
         }
@@ -1205,8 +1337,14 @@
                         saveState(); // Save before overwriting
                         currentImage = img;
                         uploadOverlay.classList.add('hidden');
-                        uploadOverlay.classList.add('hidden');
-                        drawImageCentered(img);
+                        // Remove dotted outline from container
+                        document.querySelector('.sketch-canvas').style.border = 'none';
+
+                        // Resize canvas to fit image aspect ratio
+                        resizeCanvas();
+                        // Draw image fresh
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
                         extractImageColors(img);
                     };
                     img.src = e.target.result;
@@ -1219,7 +1357,8 @@
             // Clear canvas first
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            const scale = Math.min(canvas.width / img.width, canvas.height / img.height, 1);
+            // Fit to canvas (allow upscaling)
+            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
             const w = img.width * scale;
             const h = img.height * scale;
             const x = (canvas.width - w) / 2;
@@ -1290,20 +1429,24 @@
                         updateColorInputs(color);
 
                         // If Replacer Tool is Active
-                        if (currentTool === 'replacer') {
-                            if (activeColorMask) {
-                                // Second click: Apply replacement
-                                applyColorReplacement(color);
-                            } else {
-                                // First click: Select this as source?
-                                // User flow: "select color first show".
-                                // If they click swatch first, set it as source.
-                                const status = document.getElementById('replacementStatus');
-                                const preview = document.getElementById('sourceColorPreview');
-                                status.style.display = 'block';
-                                preview.style.backgroundColor = color;
-                                prepareColorReplacement(color);
-                            }
+                        // Specific Request: "Image Colors i click that automatic show on the from color"
+                        // So clicking an IMAGE COLOR always sets it as the SOURCE (From) color.
+
+                        // Switch to Replacer tool if not active, for better UX?
+                        // User implies they want to set the "From" color.
+                        if (currentTool !== 'replacer') {
+                            document.getElementById('brushReplacer').click(); // Auto-switch
+                        }
+
+                        // Always treat Image Color click as setting the SOURCE (From) color
+                        // Reset any existing mask to start fresh with this new source
+                        activeColorMask = null;
+
+                        if (color.startsWith('#')) {
+                            const rgb = hexToRgb(color);
+                            prepareColorReplacement(`rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`);
+                        } else {
+                            prepareColorReplacement(color);
                         }
 
                         if (currentTool === 'paint-area' || currentTool === 'select') {
@@ -1602,22 +1745,40 @@
             const r = parseInt(targetColor.slice(4, -1).split(',')[0]);
             const g = parseInt(targetColor.slice(4, -1).split(',')[1]);
             const b = parseInt(targetColor.slice(4, -1).split(',')[2]);
+            // Convert to HEX for UI
+            const sourceHex = rgbToHex(r, g, b);
+
             const inputColor = { r, g, b, a: 255 };
 
             for (let i = 0; i < width * height; i++) {
                 const idx = i * 4;
                 const pixColor = { r: data[idx], g: data[idx + 1], b: data[idx + 2], a: data[idx + 3] };
-                if (colorsMatch(pixColor, inputColor, 30)) {
+                if (colorsMatch(pixColor, inputColor, 35)) {
                     indices.push(idx); // Store byte index for speed
                 }
             }
             activeColorMask = indices;
+
+            // UI Update for "From"
+            const panel = document.getElementById('colorReplacerPanel');
+            const fromPrev = document.getElementById('replaceFromPreview');
+            const fromHex = document.getElementById('replaceFromHex');
+
+            // panel.style.display = 'block'; // Always visible now
+            fromPrev.style.backgroundColor = targetColor; // rgb(...)
+            fromHex.textContent = sourceHex;
+
+            // Reset "To"
+            document.getElementById('replaceToPreview').style.backgroundColor = 'transparent';
+            document.getElementById('replaceTargetInput').value = '';
         }
 
         function applyColorReplacement(newColorHex) {
             if (!activeColorMask || activeColorMask.length === 0) return;
 
-            saveState();
+            // saveState(); // CAUTION: Calling saveState on every input change might fill history. Ideally debounce.
+            // For now, let's just do it.
+
             const rgb = hexToRgb(newColorHex);
             const width = canvas.width;
             const height = canvas.height;
@@ -1633,15 +1794,25 @@
             }
             ctx.putImageData(imageData, 0, 0);
 
-            // Update the visual swatch
-            if (lastSelectedSwatch) {
-                lastSelectedSwatch.style.backgroundColor = newColorHex;
-            }
+            // UI Update for "To"
+            document.getElementById('replaceToPreview').style.backgroundColor = newColorHex;
+            document.getElementById('replaceTargetInput').value = newColorHex;
 
-            // Clear replacement state after applying
-            activeColorMask = null;
-            lastSelectedSwatch = null;
-            document.getElementById('replacementStatus').style.display = 'none';
+            // Clear replacement state? NO, user might want to edit the hex.
+            // activeColorMask = null; 
+            // document.getElementById('replacementStatus').style.display = 'none';
+        }
+
+        // Listener for the new Target Input
+        const replaceInput = document.getElementById('replaceTargetInput');
+        if (replaceInput) {
+            replaceInput.addEventListener('input', (e) => {
+                let val = e.target.value;
+                if (!val.startsWith('#')) val = '#' + val;
+                if (/^#[0-9A-F]{6}$/i.test(val)) {
+                    applyColorReplacement(val);
+                }
+            });
         }
 
         function performMagnetSelection(x, y, isStart) {
@@ -1877,15 +2048,11 @@
 
                     // 1. Select Source Color
                     activeColorMask = null; // Reset
-                    lastSelectedSwatch = null; // No UI swatch to update, unless we find one
+                    lastSelectedSwatch = null;
 
-                    // Update UI
-                    const status = document.getElementById('replacementStatus');
-                    const preview = document.getElementById('sourceColorPreview');
-                    status.style.display = 'block';
-                    preview.style.backgroundColor = colorHex;
-
-                    prepareColorReplacement(colorHex);
+                    // We prepare using RGB string to match existing logic
+                    const rgbStr = `rgb(${r}, ${g}, ${b})`;
+                    prepareColorReplacement(rgbStr);
                     return;
                 }
 
@@ -2026,25 +2193,30 @@
                 if (currentTool === 'replacer') {
                     activeColorMask = null;
                     lastSelectedSwatch = null;
-                    document.getElementById('replacementStatus').style.display = 'none';
+                    // Dont hide panel, just reset visuals?
+                    document.getElementById('replaceFromPreview').style.backgroundColor = '';
+                    document.getElementById('replaceFromHex').textContent = '-';
+                    document.getElementById('replaceToPreview').style.backgroundColor = '';
+                    document.getElementById('replaceTargetInput').value = '';
                 }
             }
         });
 
+        // Color Inputs
         // Color Inputs
         function updateColorInputs(color) {
             // Color can be hex or rgb
             let r, g, b, a = 1;
 
             if (color.startsWith('#')) {
-                hexInput.value = color;
+                if (hexInput) hexInput.value = color;
                 const rgb = hexToRgb(color);
-                rgbaInput.value = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`;
+                if (rgbaInput) rgbaInput.value = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 1)`;
             } else if (color.startsWith('rgb')) {
-                rgbaInput.value = color;
+                if (rgbaInput) rgbaInput.value = color;
                 // Convert to hex
                 const rgb = parseRgbString(color);
-                hexInput.value = rgbToHex(rgb.r, rgb.g, rgb.b);
+                if (hexInput) hexInput.value = rgbToHex(rgb.r, rgb.g, rgb.b);
             }
             currentColor = color;
             ctx.strokeStyle = color;
@@ -2116,7 +2288,7 @@
                     currentTool = 'replacer';
                     clearSelection();
                     // Show replacement status if hidden, or keep logic for click
-                    document.getElementById('replacementStatus').style.display = 'none'; // Hide until first click
+                    // document.getElementById('colorReplacerPanel').style.display = 'none'; // Always visible
                     activeColorMask = null;
                 } else if (this.id === 'brushPicker') { // Keep legacy ID if present?
                     currentTool = 'picker';
@@ -2465,6 +2637,132 @@
                 });
             }
 
+            // Mobile Bottom Sheet Drag Logic
+            const sheetDragHandle = document.querySelector('.sheet-drag-handle');
+            const sidebarRight = document.querySelector('.sidebar-right');
+            let isDragging = false;
+            let startY = 0;
+            let startHeight = 0;
+            const minHeight = 200; // Minimum 200px
+            const maxHeight = window.innerHeight; // Maximum 100% of viewport (full screen)
+
+            function initBottomSheetDrag() {
+                if (!sheetDragHandle || window.innerWidth > 768) return;
+
+                sheetDragHandle.addEventListener('touchstart', handleDragStart, { passive: false });
+                sheetDragHandle.addEventListener('mousedown', handleDragStart);
+
+                document.addEventListener('touchmove', handleDragMove, { passive: false });
+                document.addEventListener('mousemove', handleDragMove);
+
+                document.addEventListener('touchend', handleDragEnd);
+                document.addEventListener('mouseup', handleDragEnd);
+            }
+
+            function handleDragStart(e) {
+                if (window.innerWidth > 768) return;
+
+                isDragging = true;
+                startY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+                startHeight = sidebarRight.offsetHeight;
+
+                if (e.type === 'touchstart') {
+                    e.preventDefault();
+                }
+            }
+
+            function handleDragMove(e) {
+                if (!isDragging) return;
+
+                const currentY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+                const deltaY = startY - currentY; // Positive when dragging up
+                let newHeight = startHeight + deltaY;
+
+                // Constrain height
+                newHeight = Math.max(minHeight, Math.min(maxHeight, newHeight));
+
+                sidebarRight.style.height = newHeight + 'px';
+
+                if (e.type === 'touchmove') {
+                    e.preventDefault();
+                }
+            }
+
+            function handleDragEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+
+                // Optional: Snap to predefined heights
+                const currentHeight = sidebarRight.offsetHeight;
+                const snapPoints = [minHeight, window.innerHeight * 0.5, maxHeight];
+
+                // Find closest snap point
+                let closestSnap = snapPoints[0];
+                let minDiff = Math.abs(currentHeight - snapPoints[0]);
+
+                for (let snap of snapPoints) {
+                    const diff = Math.abs(currentHeight - snap);
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        closestSnap = snap;
+                    }
+                }
+
+                // Snap if within 50px of a snap point
+                if (minDiff < 50) {
+                    sidebarRight.style.transition = 'height 0.3s ease';
+                    sidebarRight.style.height = closestSnap + 'px';
+                    setTimeout(() => {
+                        sidebarRight.style.transition = 'none';
+                    }, 300);
+                }
+            }
+
+            // Initialize on load and resize
+            initBottomSheetDrag();
+            window.addEventListener('resize', () => {
+                if (window.innerWidth <= 768) {
+                    initBottomSheetDrag();
+                }
+            });
+
+            // Mobile Tabs Logic
+            const mobileTabs = document.querySelectorAll('.mobile-tab');
+            const tabContentImage = document.getElementById('tab-content-image');
+            const tabContentBasic = document.getElementById('tab-content-basic');
+
+            function updateMobileTabDisplay() {
+                if (window.innerWidth > 1024) {
+                    // Desktop: Show everything
+                    if (tabContentImage) tabContentImage.style.display = 'block';
+                    if (tabContentBasic) tabContentBasic.style.display = 'block';
+                    return;
+                }
+
+                // Mobile: Check active tab
+                const activeTab = document.querySelector('.mobile-tab.active');
+                if (activeTab && activeTab.dataset.tab === 'image') {
+                    if (tabContentImage) tabContentImage.style.display = 'block';
+                    if (tabContentBasic) tabContentBasic.style.display = 'none';
+                } else if (activeTab && activeTab.dataset.tab === 'basic') {
+                    if (tabContentImage) tabContentImage.style.display = 'none';
+                    if (tabContentBasic) tabContentBasic.style.display = 'block';
+                }
+            }
+
+            mobileTabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    mobileTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    updateMobileTabDisplay();
+                });
+            });
+
+            // Init tabs on load/resize
+            updateMobileTabDisplay();
+            window.addEventListener('resize', updateMobileTabDisplay);
+
+
             // Close sidebar when clicking outside on mobile
             document.addEventListener('click', function (e) {
                 // Check if click was on a header tool button
@@ -2506,10 +2804,20 @@
         document.querySelectorAll('.btn').forEach(btn => {
             btn.addEventListener('click', function () {
                 if (this.textContent === 'Restart') {
-                    ctx.clearRect(0, 0, canvas.width, canvas.height);
-                    currentImage = null;
-                    uploadOverlay.classList.remove('hidden');
-                    saveState();
+                    if (currentImage) {
+                        // Soft Reset: Keep image, clear edits
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.drawImage(currentImage, 0, 0, canvas.width, canvas.height);
+                        saveState();
+                    } else {
+                        // Full Reset
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        currentImage = null;
+                        uploadOverlay.classList.remove('hidden');
+                        document.querySelector('.sketch-canvas').style.border = ''; // Restore dotted border
+                        resizeCanvas(); // Reset canvas size/aspect ratio
+                        saveState();
+                    }
                 } else if (this.textContent === 'Download') {
                     const link = document.createElement('a');
                     link.download = 'painting.png';
