@@ -1001,6 +1001,7 @@
                         style="display: none; border-bottom: 1px solid #eee; margin-bottom: 12px;">
                         <div class="mobile-tab active" data-tab="image">Image Colors</div>
                         <div class="mobile-tab" data-tab="basic">Basic Colors</div>
+                        <div class="mobile-tab" data-tab="custom">Custom Color</div>
                     </div>
 
                     <!-- TAB CONTENT: IMAGE COLORS -->
@@ -1065,9 +1066,15 @@
                             <div id="basicColorGrid" style="display: flex; flex-wrap: wrap; gap: 8px;">
                                 <!-- Auto-generated Color Tags -->
                             </div>
+                        </div>
+                    </div>
 
+                    <!-- TAB CONTENT: CUSTOM COLOR -->
+                    <div id="tab-content-custom">
+                        <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px;"
+                            class="desktop-separator">
                             <!-- CUSTOM COLOR SECTION -->
-                            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;">
+                            <div>
                                 <div class="section-title" style="margin-bottom: 10px;">Custom Color</div>
 
                                 <!-- HEX Input -->
@@ -2866,12 +2873,14 @@
             const mobileTabs = document.querySelectorAll('.mobile-tab');
             const tabContentImage = document.getElementById('tab-content-image');
             const tabContentBasic = document.getElementById('tab-content-basic');
+            const tabContentCustom = document.getElementById('tab-content-custom');
 
             function updateMobileTabDisplay() {
                 if (window.innerWidth > 1024) {
                     // Desktop: Show everything
                     if (tabContentImage) tabContentImage.style.display = 'block';
                     if (tabContentBasic) tabContentBasic.style.display = 'block';
+                    if (tabContentCustom) tabContentCustom.style.display = 'block';
                     return;
                 }
 
@@ -2880,9 +2889,15 @@
                 if (activeTab && activeTab.dataset.tab === 'image') {
                     if (tabContentImage) tabContentImage.style.display = 'block';
                     if (tabContentBasic) tabContentBasic.style.display = 'none';
+                    if (tabContentCustom) tabContentCustom.style.display = 'none';
                 } else if (activeTab && activeTab.dataset.tab === 'basic') {
                     if (tabContentImage) tabContentImage.style.display = 'none';
                     if (tabContentBasic) tabContentBasic.style.display = 'block';
+                    if (tabContentCustom) tabContentCustom.style.display = 'none';
+                } else if (activeTab && activeTab.dataset.tab === 'custom') {
+                    if (tabContentImage) tabContentImage.style.display = 'none';
+                    if (tabContentBasic) tabContentBasic.style.display = 'none';
+                    if (tabContentCustom) tabContentCustom.style.display = 'block';
                 }
             }
 
