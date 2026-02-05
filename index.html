@@ -593,6 +593,13 @@
         @media (max-width: 1024px) {
             /* MOBILE RESPONSIVE BOTTOM SHEET */
             @media (max-width: 1024px) {
+
+                /* Add padding to canvas section to prevent overlap with bottom sheet */
+                .canvas-section {
+                    padding-bottom: 30vh;
+                    /* Match default sheet height */
+                }
+
                 .sidebar-right {
                     position: fixed;
                     bottom: 0;
@@ -671,8 +678,8 @@
                 position: fixed;
                 left: 0;
                 bottom: 0;
-                height: 50vh;
-                /* Default height - will be controlled by JS */
+                height: 30vh;
+                /* Default height - smaller/lower */
                 width: 100%;
                 z-index: 2000;
                 background: white;
