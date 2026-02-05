@@ -1065,6 +1065,43 @@
                             <div id="basicColorGrid" style="display: flex; flex-wrap: wrap; gap: 8px;">
                                 <!-- Auto-generated Color Tags -->
                             </div>
+
+                            <!-- CUSTOM COLOR SECTION -->
+                            <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #eee;">
+                                <div class="section-title" style="margin-bottom: 10px;">Custom Color</div>
+
+                                <!-- HEX Input -->
+                                <div style="margin-bottom: 10px;">
+                                    <label
+                                        style="font-size: 10px; font-weight: 600; color: #666; display: block; margin-bottom: 4px;">HEX</label>
+                                    <input type="text" id="customHexInput" placeholder="#FF5733"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: monospace;">
+                                </div>
+
+                                <!-- RGB Input -->
+                                <div style="margin-bottom: 10px;">
+                                    <label
+                                        style="font-size: 10px; font-weight: 600; color: #666; display: block; margin-bottom: 4px;">RGB</label>
+                                    <input type="text" id="customRgbInput" placeholder="rgb(255, 87, 51)"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: monospace;">
+                                </div>
+
+                                <!-- RGBA Input -->
+                                <div style="margin-bottom: 10px;">
+                                    <label
+                                        style="font-size: 10px; font-weight: 600; color: #666; display: block; margin-bottom: 4px;">RGBA</label>
+                                    <input type="text" id="customRgbaInput" placeholder="rgba(255, 87, 51, 1)"
+                                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 12px; font-family: monospace;">
+                                </div>
+
+                                <!-- Color Preview -->
+                                <div style="display: flex; align-items: center; gap: 8px; margin-top: 12px;">
+                                    <div style="font-size: 10px; font-weight: 600; color: #666;">Preview:</div>
+                                    <div id="customColorPreview"
+                                        style="flex: 1; height: 32px; border-radius: 6px; border: 1px solid #ddd; background: #fff;">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2410,6 +2447,89 @@
 
         renderBasicColors();
 
+        // Custom Color Input Logic
+        const customHexInput = document.getElementById('customHexInput');
+        const customRgbInput = document.getElementById('customRgbInput');
+        const customRgbaInput = document.getElementById('customRgbaInput');
+        const customColorPreview = document.getElementById('customColorPreview');
+
+        function applyCustomColor(colorString, inputType) {
+            let validColor = null;
+            let rgbColor = null;
+
+            try {
+                if (inputType === 'hex') {
+                    // Validate HEX format
+                    if (/^#?[0-9A-F]{6}$/i.test(colorString.replace('#', ''))) {
+                        const hex = colorString.startsWith('#') ? colorString : '#' + colorString;
+                        validColor = hex;
+                        rgbColor = hexToRgb(hex);
+                    }
+                } else if (inputType === 'rgb') {
+                    // Validate RGB format: rgb(r, g, b)
+                    const match = colorString.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+                    if (match) {
+                        const r = parseInt(match[1]);
+                        const g = parseInt(match[2]);
+                        const b = parseInt(match[3]);
+                        if (r <= 255 && g <= 255 && b <= 255) {
+                            validColor = `rgb(${r}, ${g}, ${b})`;
+                            rgbColor = { r, g, b, a: 255 };
+                        }
+                    }
+                } else if (inputType === 'rgba') {
+                    // Validate RGBA format: rgba(r, g, b, a)
+                    const match = colorString.match(/rgba\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/i);
+                    if (match) {
+                        const r = parseInt(match[1]);
+                        const g = parseInt(match[2]);
+                        const b = parseInt(match[3]);
+                        const a = parseFloat(match[4]);
+                        if (r <= 255 && g <= 255 && b <= 255 && a >= 0 && a <= 1) {
+                            validColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+                            rgbColor = { r, g, b, a: Math.floor(a * 255) };
+                        }
+                    }
+                }
+
+                if (validColor && rgbColor) {
+                    // Update preview
+                    customColorPreview.style.backgroundColor = validColor;
+
+                    // Apply to active selection if exists
+                    if (isSelectionActive && selectionMask && selectionMask.length > 0) {
+                        fillSelection(rgbColor);
+                    }
+                    // Or apply to replacer if active
+                    else if (currentTool === 'replacer' && activeColorMask) {
+                        const hexColor = rgbToHex(rgbColor.r, rgbColor.g, rgbColor.b);
+                        applyColorReplacement(hexColor);
+                    }
+                }
+            } catch (e) {
+                // Invalid color format, do nothing
+            }
+        }
+
+        // Add keyup event listeners
+        if (customHexInput) {
+            customHexInput.addEventListener('keyup', (e) => {
+                applyCustomColor(e.target.value, 'hex');
+            });
+        }
+
+        if (customRgbInput) {
+            customRgbInput.addEventListener('keyup', (e) => {
+                applyCustomColor(e.target.value, 'rgb');
+            });
+        }
+
+        if (customRgbaInput) {
+            customRgbaInput.addEventListener('keyup', (e) => {
+                applyCustomColor(e.target.value, 'rgba');
+            });
+        }
+
         // Modal Logic
         const modal = document.getElementById('colorPaletteModal');
         const modalTitle = document.getElementById('modalTitle');
@@ -2551,9 +2671,18 @@
                     swatch.onclick = () => {
                         copyToClipboard(hex);
                         updateColorInputs(hex);
-                        if (currentTool === 'replacer' && activeColorMask) {
+
+                        // If there's an active selection, fill it with this color
+                        if (isSelectionActive && selectionMask && selectionMask.length > 0) {
+                            const rgb = hexToRgb(hex);
+                            fillSelection(rgb);
+                            showToast('Color applied to selection!');
+                        }
+                        // If replacer tool is active with a color mask
+                        else if (currentTool === 'replacer' && activeColorMask) {
                             applyColorReplacement(hex);
                         }
+
                         modal.style.display = 'none';
                     };
                     rowContainer.appendChild(swatch);
