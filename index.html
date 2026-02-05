@@ -953,6 +953,17 @@
                                 style="flex:1; padding:6px; cursor:text;">
                         </div>
                     </div>
+
+                    <!-- BASIC COLORS + SEARCH -->
+                    <div style="margin-top: 16px; border-top: 1px solid #eee; padding-top: 16px;">
+                        <div class="section-title" style="margin-bottom: 10px;">Basic Colors</div>
+                        <input type="text" id="colorSearch" placeholder="Search basic colors..."
+                            style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 12px; font-size: 12px;">
+
+                        <div id="basicColorGrid" style="display: flex; flex-wrap: wrap; gap: 8px;">
+                            <!-- Auto-generated Color Tags -->
+                        </div>
+                    </div>
                 </div>
 
                 <!-- BRUSHES -->
@@ -992,12 +1003,41 @@
                 </div>
 
 
-
             </div>
         </div>
+    </div>
+
+
 
     </div>
     </div>
+
+    </div>
+    </div>
+    </div>
+
+    <!-- COLOR PALETTE MODAL (Moved out to body for correct centering) -->
+    <div id="colorPaletteModal"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; justify-content: center; align-items: center;">
+        <div
+            style="background: white; border-radius: 12px; width: 320px; padding: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                <h3 id="modalTitle" style="margin: 0; font-size: 16px; font-weight: 600;">Color Palette</h3>
+                <button id="closeModalBtn"
+                    style="border: none; background: none; font-size: 20px; cursor: pointer; color: #999;">&times;</button>
+            </div>
+            <div id="modalPaletteGrid"
+                style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 16px;">
+                <!-- Generated Shades -->
+            </div>
+            <div style="text-align: center; font-size: 12px; color: #999;">Click shade to copy HEX</div>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification"
+        style="position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 20px; font-size: 12px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 3001;">
+        Copied to Clipboard!
     </div>
 
     <script>
@@ -2125,6 +2165,254 @@
         document.getElementById('section-colors').style.display = 'none';
         document.getElementById('section-settings').style.display = 'none';
 
+        // Initialize Basic Colors
+        const basicColors = [
+            { name: 'Red', hex: '#FF0000', light: '#ffe6e6', dark: '#cc0000' },
+            { name: 'Green', hex: '#00FF00', light: '#e6ffe6', dark: '#00cc00' },
+            { name: 'Blue', hex: '#0000FF', light: '#e6e6ff', dark: '#0000cc' },
+            { name: 'Yellow', hex: '#FFFF00', light: '#ffffcc', dark: '#cccc00' },
+            { name: 'Cyan', hex: '#00FFFF', light: '#e6ffff', dark: '#00cccc' },
+            { name: 'Magenta', hex: '#FF00FF', light: '#ffe6ff', dark: '#cc00cc' },
+            { name: 'Orange', hex: '#FFA500', light: '#fff5cc', dark: '#cc8400' },
+            { name: 'Purple', hex: '#800080', light: '#f2e6f2', dark: '#660066' },
+            { name: 'Pink', hex: '#FFC0CB', light: '#fff0f5', dark: '#cc99a2' },
+            { name: 'Brown', hex: '#A52A2A', light: '#f6eaea', dark: '#842121' },
+            { name: 'Gray', hex: '#808080', light: '#f2f2f2', dark: '#666666' },
+            { name: 'Black', hex: '#000000', light: '#e6e6e6', dark: '#000000' },
+            { name: 'White', hex: '#FFFFFF', light: '#ffffff', dark: '#cccccc' },
+            { name: 'Teal', hex: '#008080', light: '#e6f2f2', dark: '#006666' },
+            { name: 'Navy', hex: '#000080', light: '#e6e6f2', dark: '#000066' },
+            { name: 'Lime', hex: '#00FF00', light: '#e6ffe6', dark: '#00cc00' }
+        ];
+
+        const basicGrid = document.getElementById('basicColorGrid');
+        const searchInput = document.getElementById('colorSearch');
+
+        function renderBasicColors(filter = '') {
+            basicGrid.innerHTML = '';
+
+            // Enforce Grid Layout for perfect alignment
+            basicGrid.style.display = 'grid';
+            basicGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
+            basicGrid.style.gap = '8px';
+
+            basicColors.forEach(c => {
+                if (c.name.toLowerCase().includes(filter.toLowerCase())) {
+                    const tag = document.createElement('div');
+                    tag.style.cssText = `
+                        background-color: ${c.light};
+                        color: ${c.dark};
+                        border: 1px solid ${c.dark}40;
+                        padding: 8px 10px;
+                        border-radius: 4px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: all 0.2s;
+                        text-align: center;
+                        width: 100%;
+                        box-sizing: border-box;
+                    `;
+                    tag.textContent = c.name;
+                    tag.addEventListener('click', () => {
+                        openColorModal(c);
+                        /* Previous logic moved to modal selection if needed, or kept separate?
+                           Request says: "modal click some color automatic copy color code hex then show also copy alert toster"
+                           So main action changes to Open Modal.
+                        */
+                    });
+                    basicGrid.appendChild(tag);
+                }
+            });
+        }
+
+        renderBasicColors();
+
+        // Modal Logic
+        const modal = document.getElementById('colorPaletteModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalGrid = document.getElementById('modalPaletteGrid');
+        const closeBtn = document.getElementById('closeModalBtn');
+        const toast = document.getElementById('toastNotification');
+
+        // Helper Functions for HSL
+        function hexToHsl(hex) {
+            let rgb = hexToRgb(hex);
+            let r = rgb.r / 255;
+            let g = rgb.g / 255;
+            let b = rgb.b / 255;
+            let max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+
+            if (max == min) {
+                h = s = 0; // achromatic
+            } else {
+                let d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: h * 360, s: s * 100, l: l * 100 };
+        }
+
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        closeBtn.onclick = () => modal.style.display = 'none';
+        window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; };
+
+        function openColorModal(baseColor) {
+            modal.style.display = 'flex';
+            modalTitle.textContent = baseColor.name + ' Palettes (10 Sets)';
+            modalGrid.innerHTML = '';
+
+            // Allow scrolling for many sets
+            modalGrid.style.display = 'flex';
+            modalGrid.style.flexDirection = 'column';
+            modalGrid.style.gap = '12px';
+            modalGrid.style.overflowY = 'auto';
+            modalGrid.style.maxHeight = '60vh';
+
+            const baseHSL = hexToHsl(baseColor.hex);
+
+            // Generate 10 Sets
+            const sets = [
+                { name: 'Shades (Lightness)', type: 'lightness' },
+                { name: 'Tints (Saturation)', type: 'saturation' },
+                { name: 'Vibrant (Sat+)', type: 'vibrant' },
+                { name: 'Muted (Sat-)', type: 'muted' },
+                { name: 'Warm Shift (+Hue)', type: 'hue_plus' },
+                { name: 'Cool Shift (-Hue)', type: 'hue_minus' },
+                { name: 'Golden Tint', type: 'gold' },
+                { name: 'Pastel', type: 'pastel' },
+                { name: 'Analogous', type: 'analogous' },
+                { name: 'Deep', type: 'deep' }
+            ];
+
+            sets.forEach(set => {
+                const rowLabel = document.createElement('div');
+                rowLabel.textContent = set.name;
+                rowLabel.style.fontSize = '10px';
+                rowLabel.style.fontWeight = '600';
+                rowLabel.style.marginBottom = '4px';
+                rowLabel.style.color = '#666';
+                modalGrid.appendChild(rowLabel);
+
+                const rowContainer = document.createElement('div');
+                rowContainer.style.display = 'grid';
+                rowContainer.style.gridTemplateColumns = 'repeat(8, 1fr)';
+                rowContainer.style.gap = '6px';
+
+                // Generate 8 colors per set
+                for (let i = 0; i < 8; i++) {
+                    let h = baseHSL.h, s = baseHSL.s, l = baseHSL.l;
+
+                    if (set.type === 'lightness') {
+                        // 10% to 95%
+                        l = 10 + (i * 12);
+                    } else if (set.type === 'saturation') {
+                        // Fix lightness, vary saturation
+                        l = 50;
+                        s = 10 + (i * 12);
+                    } else if (set.type === 'vibrant') {
+                        s = Math.min(100, s + 20);
+                        l = 20 + (i * 10);
+                    } else if (set.type === 'muted') {
+                        s = Math.max(0, s - 30);
+                        l = 20 + (i * 10);
+                    } else if (set.type === 'hue_plus') {
+                        h = (h + (i * 5)) % 360;
+                    } else if (set.type === 'hue_minus') {
+                        h = (h - (i * 5) + 360) % 360;
+                    } else if (set.type === 'gold') {
+                        // Shift towards yellow (60)
+                        const targetH = 50;
+                        h = h + (targetH - h) * (i / 10);
+                        l = 40 + (i * 8);
+                    } else if (set.type === 'pastel') {
+                        s = Math.min(100, s - 10);
+                        l = 75 + (i * 3); // High lightness
+                    } else if (set.type === 'analogous') {
+                        h = (h + (i * 15)) % 360;
+                    } else if (set.type === 'deep') {
+                        l = 10 + (i * 5); // Dark
+                        s = Math.min(100, s + 10);
+                    }
+
+                    // Clamping
+                    s = Math.max(0, Math.min(100, s));
+                    l = Math.max(0, Math.min(100, l));
+
+                    const hex = hslToHex(h, s, l);
+
+                    const swatch = document.createElement('div');
+                    swatch.style.cssText = `
+                        height: 24px; 
+                        border-radius: 4px; 
+                        background-color: ${hex}; 
+                        cursor: pointer;
+                        border: 1px solid rgba(0,0,0,0.1);
+                    `;
+
+                    swatch.onclick = () => {
+                        copyToClipboard(hex);
+                        updateColorInputs(hex);
+                        if (currentTool === 'replacer' && activeColorMask) {
+                            applyColorReplacement(hex);
+                        }
+                        modal.style.display = 'none';
+                    };
+                    rowContainer.appendChild(swatch);
+                }
+                modalGrid.appendChild(rowContainer);
+            });
+        }
+
+        function mixColors(color1, color2, weight) {
+            // Mix hex color1 with color2 by weight (0..1)
+            const c1 = hexToRgb(color1);
+            const c2 = hexToRgb(color2);
+
+            const r = Math.round(c1.r * (1 - weight) + c2.r * weight);
+            const g = Math.round(c1.g * (1 - weight) + c2.g * weight);
+            const b = Math.round(c1.b * (1 - weight) + c2.b * weight);
+
+            return rgbToHex(r, g, b);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('Copied: ' + text);
+            });
+        }
+
+        function showToast(msg) {
+            toast.textContent = msg;
+            toast.style.opacity = '1';
+            setTimeout(() => {
+                toast.style.opacity = '0';
+            }, 2000);
+        }
+
+        searchInput.addEventListener('keyup', (e) => {
+            renderBasicColors(e.target.value);
+        });
+
         // Initialize tool from UI
         const activeBrush = document.querySelector('.brush-item.active');
         if (activeBrush) {
@@ -2179,6 +2467,9 @@
 
             // Close sidebar when clicking outside on mobile
             document.addEventListener('click', function (e) {
+                // Check if click was on a header tool button
+                if (e.target.closest('.header-tool-btn')) return;
+
                 if (window.innerWidth <= 768 &&
                     sidebarRight.classList.contains('show') &&
                     !sidebarRight.contains(e.target) &&
